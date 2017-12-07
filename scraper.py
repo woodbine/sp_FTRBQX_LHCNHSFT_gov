@@ -85,7 +85,7 @@ def convert_mth_strings ( mth_string ):
 #### VARIABLES 1.0
 
 entity_id = "FTRBQX_LHCNHSFT_gov"
-url = "http://www.lhch.nhs.uk/About-Us/Performance-Plans/25k-expenditure.aspx"
+url = "http://www.lhch.nhs.uk/about-lhch/performance-plans-and-publications/trust-expenditure/"
 errors = 0
 data = []
 
@@ -97,30 +97,24 @@ soup = BeautifulSoup(html, 'lxml')
 
 #### SCRAPE DATA
 
-
-archive_links = soup.find('div', id='contentmain').find_all('a')
-for archive_link in archive_links:
-    year = archive_link.text.strip()
-    archive_html = urllib2.urlopen('http://www.lhch.nhs.uk'+archive_link['href'])
-    archive_soup = BeautifulSoup(archive_html, 'lxml')
-    links = archive_soup.find('div', id='contentmain').find_all('a')
-    for link in links:
-        csvMth = csvYr = ''
-        try:
-            if '.csv' in link['href'] or '.xls' in link['href'] or '.xlsx' in link['href'] or '.pdf' in link['href']:
-                url = 'http://www.lhch.nhs.uk'+link['href']
-                title = link.text.strip()
-                if 'Month 1 ' in title or 'Month 2' in title or 'Month 3' in title or 'Month 4' in title or 'Month 5'  in title or 'Month 6' in title or 'Month 7' in title or u'Month\xa08' in title or 'Month 8' in title or 'Month 9' in title:
-                    csvMth = title.split('(')[-1].split(')')[0].strip()[:3]
-                    csvYr = year[:4]
-                elif 'Month 10' in title or 'Month 11' in title or 'Month 12' in title:
-                    csvMth = title.split('(')[-1].split(')')[0].strip()[:3]
-                    csvYr = '20'+year.split('-')[-1]
-                csvMth = convert_mth_strings(csvMth.upper())
-                data.append([csvYr, csvMth, url])
-        except:
-            pass
-
+links = soup.find('table', 'table').find_all('div', 'col-xs-9')
+for link in links:
+    url = 'http://www.lhch.nhs.uk' + link.find('a')['href']
+    csvMth = csvYr = ''
+    title = link.find('a').text.strip()
+    title_list = title.split()
+    if 'Month' in title_list[0]:
+        year = re.search('([0-9]{4}-[0-9]{2})', title)
+        csvYr = '20'+year.groups()[0].split('-')[-1]
+        csvMth = title.split(' (')[-1].split(') ')[0][:3]
+    elif 'Over' in title_list[0]:
+        csvYr = title_list[-1]
+        csvMth = title_list[-2][:3]
+    else:
+        csvMth = title_list[0][:3]
+        csvYr = title_list[1][:4]
+    csvMth = convert_mth_strings(csvMth.upper())
+    data.append([csvYr, csvMth, url])
 
 
 #### STORE DATA 1.0
